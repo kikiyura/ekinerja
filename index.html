@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -103,7 +102,6 @@
             display: inline-block;
         }
     </style>
-<script src="pdfjs/build/pdf.min.js"></script>
     <script>
         function showWelcomeScreen() {
             document.getElementById('welcomeScreen').style.display = 'block';
@@ -130,153 +128,34 @@
 function loadPDF(pdfName, month, page = 1) {
     const basePath = `https://kikiyura.github.io/ekinerja/pdfs/${month}`;
     const pdfViewer = document.getElementById('pdfViewer');
-    const loadingNotification = document.getElementById('loadingNotification');
-    const errorNotification = document.getElementById('errorNotification');
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-    // Tampilkan notifikasi loading
-    loadingNotification.style.display = 'block';
-    errorNotification.style.display = 'none'; // Sembunyikan notifikasi kesalahan
-    pdfViewer.style.display = 'none'; // Sembunyikan iframe saat memuat
-
-    const pdfURL = `${basePath}/${pdfName}`;
-    const txtURL = `${basePath}/${pdfName.replace('.pdf', '.txt')}`;
-
-    // Log URL untuk debugging
-    console.log(`Mencoba untuk memuat PDF dari: ${pdfURL}`);
-    console.log(`Mencoba untuk memuat TXT dari: ${txtURL}`);
-
-    fetch(pdfURL)
-        .then(response => {
-            if (response.ok) {
-                // Jika PDF ditemukan, muat PDF
-                pdfViewer.src = `${pdfURL}#page=${page}`;
-                loadingNotification.style.display = 'none'; // Sembunyikan loading
-                pdfViewer.style.display = 'block'; // Tampilkan iframe
-                return Promise.reject("PDF ditemukan, tidak perlu memuat .txt"); // Menghentikan eksekusi lebih lanjut
-            } else {
-                // Jika PDF tidak ditemukan, coba baca file .txt
-                console.log(`PDF tidak ditemukan, mencoba memuat file .txt untuk: ${pdfName}`);
-                return fetch(txtURL);
-            }
-        })
-        .then(response => {
-            if (response && response.ok) {
-                // Jika file .txt ditemukan, baca URL dari file tersebut
-                return response.text();
-            } else if (response) {
-                // Jika file .txt tidak ditemukan
-                console.log(`File .txt tidak ditemukan untuk: ${pdfName}`);
-                throw new Error(`File .txt tidak ditemukan untuk: ${pdfName}`);
-            }
-        })
-        .then(text => {
-            // Debug: tampilkan isi file .txt
-            console.log('Isi file .txt:', text);
-            if (text && text.trim()) {
-                // Menghapus spasi di awal dan akhir
-                const trimmedText = text.trim();
-                console.log('Isi file .txt setelah trimming:', trimmedText); // Log isi setelah trimming
-
-                // Pastikan URL valid sebelum memuat
-                if (isValidURL(trimmedText)) {
-                    // Muat PDF dari URL yang diambil dari file .txt
-                    pdfViewer.src = trimmedText; // Menggunakan URL yang ada di dalam file .txt
-                    loadingNotification.style.display = 'none'; // Sembunyikan loading
-                    pdfViewer.style.display = 'block'; // Tampilkan iframe
-                } else {
-                    showError(`Isi file .txt tidak valid untuk: ${pdfName}`);
-                }
-            } else {
-                // Jika isi file .txt kosong atau hanya berisi spasi
-                showError(`Isi file .txt kosong untuk: ${pdfName}`);
-            }
-        })
-        .catch(error => {
-            console.error('Terjadi kesalahan:', error);
-            // Tampilkan pesan kesalahan hanya jika bukan pesan yang ditolak sebelumnya
-            if (error !== "PDF ditemukan, tidak perlu memuat .txt") {
-                showError('Terjadi kesalahan saat memuat file.');
-                pdfViewer.style.display = 'none'; // Sembunyikan iframe saat ada kesalahan
-            }
-        })
-        .finally(() => {
-            // Sembunyikan notifikasi loading setelah proses selesai
-            loadingNotification.style.display = 'none';
-        });
-}
-
-
-
-
-
-
-
-
-// Fungsi untuk menampilkan notifikasi kesalahan
-function showError(message) {
-    const errorNotification = document.getElementById('errorNotification');
-    errorNotification.textContent = message;
-    errorNotification.style.display = 'block';
-}
-
-// Fungsi untuk memvalidasi URL
-function isValidURL(url) {
-    try {
-        new URL(url); // Jika URL valid, tidak akan melempar error
-        return true;
-    } catch {
-        return false; // Jika terjadi error, URL tidak valid
+    if (isMobile) {
+        // Gunakan Google Docs Viewer untuk browser mobile
+        const googleDocsUrl = `https://docs.google.com/gview?embedded=true&url=${basePath}/${pdfName}&page=${page}`;
+        pdfViewer.src = googleDocsUrl;
+    } else {
+        // Muat PDF langsung dalam iframe untuk desktop
+        pdfViewer.src = `${basePath}/${pdfName}#page=${page}`;
     }
+
+    // Perbarui URL dengan parameter bulan, hari, dan halaman
+    updateURL(month, pdfName, page);
+
+    setTimeout(() => {
+        const expectedPdfNames = Array.from({ length: getDaysInMonth(2024, month) }, (_, i) => 
+            `ekinerja-2024-${month}-${String(i + 1).padStart(2, '0')}.pdf`
+        );
+
+        const notification = document.getElementById('notification');
+        if (expectedPdfNames.includes(pdfName)) {
+            notification.innerText = '';
+        } else {
+            notification.innerText = 'File tidak ditemukan';
+            pdfViewer.src = 'https://www.facebook.com/';
+        }
+    }, 1000);
 }
-
-
-
-
-
-
-
-
-// Fungsi untuk menampilkan notifikasi kesalahan
-function showError(message) {
-    const errorNotification = document.getElementById('errorNotification');
-    errorNotification.textContent = message;
-    errorNotification.style.display = 'block';
-}
-
-// Fungsi untuk memvalidasi URL
-function isValidURL(url) {
-    try {
-        new URL(url); // Jika URL valid, tidak akan melempar error
-        return true;
-    } catch {
-        return false; // Jika terjadi error, URL tidak valid
-    }
-}
-
-
-// Fungsi untuk menampilkan notifikasi kesalahan
-function showError(message) {
-    const errorNotification = document.getElementById('errorNotification');
-    errorNotification.textContent = message;
-    errorNotification.style.display = 'block';
-}
-
-// Fungsi untuk memvalidasi URL
-function isValidURL(url) {
-    try {
-        new URL(url); // Jika URL valid, tidak akan melempar error
-        return true;
-    } catch {
-        return false; // Jika terjadi error, URL tidak valid
-    }
-}
-
-
-
-
-
-
-
 
         function updateDays(month) {
             const daySelect = document.getElementById('daySelect');
@@ -466,13 +345,11 @@ function copyLink() {
 
 </div>
 
- <div id="loadingNotification" class="notification" style="display: none;">Sedang memuat PDF...</div><div id="errorNotification" class="notification" style="display: none; color: red;"></div>
 
-       
     <div id="notification" class="notification"></div>
 
     <div class="pdf-container">
-        <iframe id="pdfViewer" style="width: 100%; height: 100%;" type="application/pdf" allowfullscreen></iframe>
+        <iframe id="pdfViewer"></iframe>
     </div>
     <br>
      <button class="home-button" onclick="window.location.href='index.html'">Halaman Utama</button>   
